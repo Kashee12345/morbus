@@ -671,13 +671,13 @@ function floorOfDepth(d){return (d-1)%3;}
 
 // ===================== PLAYER =====================
 function newPlayer(){
-  return {x:0,y:0,r:14,lvl:1,xp:0,life:100,focus:50,gold:0,eq:{},bag:[],pots:{h:4,m:3},sk:[1,1,1,1,0],pts:0,sel:1,
+  return {x:0,y:0,r:14,lvl:1,xp:0,life:100,focus:50,gold:0,eq:{},bag:[],pots:{h:8,m:5},sk:[1,1,1,1,0],pts:0,sel:1,
     atkCd:0,swing:0,swingDir:0,face:0,dest:null,order:null,field:null,fieldKey:'',walk:0,cds:[0,0,0,0,0],wardT:0,wardTick:0,
     hurtT:0,buffs:{},needle:false,st:null,dead:false,stepT:0};
 }
 function xpNeed(l){return Math.round(70*Math.pow(l,1.65));}
 function calc(){
-  const s={life:70+14*P.lvl,focus:40+5*P.lvl,dmgMin:2,dmgMax:5,armor:2+P.lvl,abx:0,lyt:0,elec:0,ster:0,regen:1+P.lvl*0.15,leech:0,speed:0,crit:5,light:0,mf:0,dmg:0,novaFree:0};
+  const s={life:130+22*P.lvl,focus:50+6*P.lvl,dmgMin:2,dmgMax:5,armor:6+2*P.lvl,abx:0,lyt:0,elec:0,ster:0,regen:3+P.lvl*0.35,leech:3,speed:0,crit:5,light:0,mf:0,dmg:0,novaFree:0};
   const setCount={};
   for(const k of SLOTS){const it=P.eq[k]; if(!it) continue;
     if(it.d){s.dmgMin=it.d[0];s.dmgMax=it.d[1];}
@@ -702,10 +702,10 @@ function calc(){
 function wAvg(){return (P.st.dmgMin+P.st.dmgMax)/2;}
 function skillDmg(i){
   const rk=P.sk[i]||0, lv=1+0.06*P.lvl, wa=wAvg();
-  if(i===1) return (6+4*rk+0.55*wa)*lv*(1+P.st.abx/100);
-  if(i===2) return (11+7*rk+0.85*wa)*lv*(1+P.st.lyt/100);
-  if(i===3) return (9+6*rk+0.7*wa)*lv*(1+P.st.elec/100);
-  if(i===4) return (5+4*rk+0.4*wa)*lv*(1+P.st.ster/100);
+  if(i===1) return 1.4*(6+4*rk+0.55*wa)*lv*(1+P.st.abx/100);
+  if(i===2) return 1.4*(11+7*rk+0.85*wa)*lv*(1+P.st.lyt/100);
+  if(i===3) return 1.4*(9+6*rk+0.7*wa)*lv*(1+P.st.elec/100);
+  if(i===4) return 1.4*(5+4*rk+0.4*wa)*lv*(1+P.st.ster/100);
   return 0;
 }
 
@@ -941,8 +941,8 @@ function populate(){
   const A=ACTS[G.act];
   M.rooms.forEach((r,i)=>{
     if(i===0) return;
-    const main=pick(A.mons), alt=pick(A.mons), champ=Math.random()<0.13+G.depth*0.006;
-    let n=ri(2,4)+Math.floor(G.depth/4); if(MON[main].beh==='swarm') n+=3;
+    const main=G.depth===1?A.mons[(i-1)%A.mons.length]:pick(A.mons), alt=G.depth===1?main:pick(A.mons), champ=G.depth>1&&Math.random()<0.08+G.depth*0.006;
+    let n=(G.depth<=2?ri(1,3):ri(2,4))+Math.floor(G.depth/5); if(MON[main].beh==='swarm') n+=2;
     for(let k=0;k<n;k++){const p=randFloorIn(r); spawnMon(k>=n-1&&Math.random()<0.45?alt:main,p,champ&&k<3);}
   });
   const inner=M.rooms.slice(1).filter(r=>r!==M.stairsRoom);
@@ -954,7 +954,7 @@ function populate(){
 function spawnMon(id,pos,champ){
   const D=MON[id]||BOSSES[id]; const d=G.depth, nm=G.nm?1:0;
   if(!walkable(pos.x,pos.y,D.r)){let ok=null;for(let r=8;r<200&&!ok;r+=8)for(let a=0;a<6.28;a+=0.5){const x=pos.x+Math.cos(a)*r,y=pos.y+Math.sin(a)*r;if(walkable(x,y,D.r)){ok={x,y};break;}}if(ok)pos=ok;}
-  const hpS=(1+0.55*(d-1))*(nm?2.4:1), dmS=(1+0.24*(d-1))*(nm?1.7:1);
+  const hpS=(1+0.55*(d-1))*(nm?2.4:1), dmS=0.7*(1+0.2*(d-1))*(nm?1.9:1);
   const m={id,D,x:pos.x,y:pos.y,r:D.r,hp:D.hp*hpS,dmg:D.dmg*dmS,spd:D.spd,beh:D.beh,w:D.w||{},cd:rnd(0.4,1.4),st:'idle',t:0,aggro:false,
     stun:0,slow:0,flash:0,face:0,anim:Math.random()*10,gen:0,champ:false,dashCd:rnd(1,3),blinkCd:rnd(2,4),losT:0,los:false,dead:false,vuln:0};
   if(champ){m.champ=true;m.hp*=2.6;m.dmg*=1.4;m.spd*=1.12;m.r=Math.round(m.r*1.18);
@@ -984,9 +984,9 @@ function chase(m,spd,dt){
 // ===================== MONSTER AI =====================
 function meleeAI(m,d,spd,dt){
   const reach=m.r+P.r+8;
-  if(m.st==='wind'){m.t-=dt;if(m.t<=0){m.st='idle';if(hyp(P.x-m.x,P.y-m.y)<reach+16)hurtPlayer(m.dmg,m);m.cd=m.beh==='swarm'?0.75:m.beh==='tank'?1.6:1.1;}return;}
+  if(m.st==='wind'){m.t-=dt;if(m.t<=0){m.st='idle';if(hyp(P.x-m.x,P.y-m.y)<reach+16)hurtPlayer(m.dmg,m);m.cd=m.beh==='swarm'?1.1:m.beh==='tank'?2.0:1.6;}return;}
   if(d>reach) chase(m,spd*(m.beh==='swarm'?(1+0.35*Math.sin(m.anim*7)):1),dt);
-  else if(m.cd<=0){m.st='wind';m.t=m.beh==='tank'?0.45:0.3;}
+  else if(m.cd<=0){m.st='wind';m.t=m.beh==='tank'?0.65:0.5;}
 }
 function enemyShot(m,ang,spd,dmg,col,kind,r){projs.push({x:m.x,y:m.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:r||7,dmg,col,enemy:true,life:3,kind:kind||'orb',home:0});}
 function updateMon(m,dt){
@@ -998,7 +998,7 @@ function updateMon(m,dt){
   if(m.stun>0){m.stun-=dt;return;}
   let spd=m.spd*(m.slow>0?0.5:1); if(m.slow>0)m.slow-=dt;
   if(!m.aggro){
-    if((d<360&&m.los)||d<120){m.aggro=true;for(const o of mons)if(!o.aggro&&hyp(o.x-m.x,o.y-m.y)<230)o.aggro=true;}
+    if((d<360&&m.los)||d<120){m.aggro=true;for(const o of mons)if(!o.aggro&&hyp(o.x-m.x,o.y-m.y)<140)o.aggro=true;}
     else{m.t-=dt;if(m.t<=0){m.t=rnd(1.5,4);m.wx=m.x+rnd(-50,50);m.wy=m.y+rnd(-50,50);} if(m.wx!==undefined&&hyp(m.wx-m.x,m.wy-m.y)>6) steer(m,m.wx,m.wy,spd*0.3,dt);}
     return;
   }
@@ -1043,7 +1043,7 @@ function setupBoss(){
   const bid=ACTS[G.act].boss, B=BOSSES[bid];
   const m=spawnMon(bid,{x:M.arena.cx+TILE*3,y:M.arena.cy},false);
   m.boss=true; m.active=false; m.phase=1; m.gauge=0; m.timers={a:2,b:4,c:6,d:9,e:11}; m.baseR=m.r;
-  m.hp=B.hp*(1+0.5*(G.depth-1))*(G.nm?2.4:1)*1.4*(1+0.25*G.act); m.maxhp=m.hp;
+  m.hp=B.hp*(1+0.5*(G.depth-1))*(G.nm?2.4:1)*2.0*(1+0.2*G.act); m.dmg*=0.9; m.maxhp=m.hp;
   if(bid==='cerebryx'){const A=M.arena;[[0.22,0.25],[0.78,0.3],[0.5,0.82]].forEach(([fx_,fy_])=>objs.push({k:'font',name:'Mannitol Font',x:A.x+A.w*fx_,y:A.y+A.h*fy_,r:60}));}
   if(bid==='sepsis'){m.gauge=85;m.hp*=2.2;m.maxhp=m.hp;}
 }
@@ -1204,7 +1204,7 @@ function damageMon(m,amt,type,noFloat){
   m.hp-=dmg; m.flash=0.12; m.aggro=true;
   if(P.st.leech) P.life=Math.min(P.st.life,P.life+dmg*P.st.leech/100);
   if(!noFloat) floatT(m.x+rnd(-10,10),m.y-m.r-10,Math.round(dmg)+(crit?'!':''),mult>=1.5?'#ffe14a':DT[type].c,crit?21:mult>=1.5?18:14);
-  if(mult>=1.5) teach(m,type,'weak'); else if(mult<1) teach(m,type,'resist');
+  if(mult>=1.5){teach(m,type,'weak');(G.flags=G.flags||{})['weak_'+type]=1;} else if(mult<1) teach(m,type,'resist');
   for(let i=0;i<3;i++) parts.push({x:m.x,y:m.y,vx:rnd(-90,90),vy:rnd(-110,30),life:0.4,max:0.4,col:m.D.col2,s:3,g:300});
   if(m.hp<=0) killMon(m);
   return dmg;
@@ -1227,7 +1227,7 @@ function swing(ang){
   let hits=0;
   for(const m of mons){ if(m.dead) continue; const d=hyp(m.x-P.x,m.y-P.y); if(d>P.r+m.r+42) continue;
     const ad=Math.abs(((Math.atan2(m.y-P.y,m.x-P.x)-ang+9.42)%6.283)-3.14); if(ad>1.05&&d>m.r+P.r) continue;
-    damageMon(m,rnd(P.st.dmgMin,P.st.dmgMax)*(1+0.03*P.lvl),'phys'); hits++; }
+    damageMon(m,rnd(P.st.dmgMin,P.st.dmgMax)*(1.3+0.05*P.lvl),'phys'); hits++; }
   if(hits){P.focus=Math.min(P.st.focus,P.focus+3+hits);sfx('hit');}
   efx.push({k:'swing',x:P.x,y:P.y,a:ang,t:0.18});
 }
@@ -1238,6 +1238,7 @@ function cast(i,tx,ty){
   if(P.cds[i]>0) return false;
   let cost=SKILLS[i].cost; if(i===2&&P.st.novaFree) cost=0;
   if(P.focus<cost){if(G.t-_nofocusT>1.2){_nofocusT=G.t;floatT(P.x,P.y-40,'Not enough focus','#6aa0ff',14);}return false;}
+  if(i!==2&&i!==4){let bm=null,bd=130;for(const m of mons){if(m.dead||(m.boss&&!m.active))continue;const dd=hyp(m.x-tx,m.y-ty)-m.r;if(dd<bd){bd=dd;bm=m;}}if(bm){tx=bm.x;ty=bm.y;}}
   P.focus-=cost; P.cds[i]=SKILLS[i].cd; const a=Math.atan2(ty-P.y,tx-P.x); P.face=a;
   if(i===1){const n=rk>=5?7:rk>=3?5:3;const vol={hit:new Set()};for(let k=0;k<n;k++){const an=a+(k-(n-1)/2)*0.13;
       projs.push({x:P.x,y:P.y-6,vx:Math.cos(an)*560,vy:Math.sin(an)*560,r:7,dmg:skillDmg(1),type:'abx',life:0.9,pierce:1+(rk>>1),hit:new Set(),kind:'pill',ang:an,vol});}sfx('abx');}
@@ -1262,8 +1263,8 @@ function usePotion(kind){
   if(P.pots[kind]<=0){toast(kind==='h'?'No Packed RBCs left — buy more from the Apothecary.':'No oxygen canisters left.');return;}
   if(kind==='h'&&P.life>=P.st.life){floatT(P.x,P.y-40,'Already at full life','#ff8a8a',13);return;}
   if(kind==='m'&&P.focus>=P.st.focus){floatT(P.x,P.y-40,'Focus already full','#8ab0ff',13);return;}
-  P.pots[kind]--; sfx('potion');
-  if(kind==='h'){P.potH=4;P.potHamt=P.st.life*0.7/4;} else {P.potM=3;P.potMamt=P.st.focus*0.8/3;}
+  P.pots[kind]--; sfx('potion'); if(kind==='h')(G.flags=G.flags||{}).potion=1;
+  if(kind==='h'){P.life=Math.min(P.st.life,P.life+P.st.life*0.45);P.potH=2;P.potHamt=P.st.life*0.3/2;} else {P.focus=Math.min(P.st.focus,P.focus+P.st.focus*0.5);P.potM=2;P.potMamt=P.st.focus*0.3/2;}
   burst(P.x,P.y,kind==='h'?'#ff3a3a':'#4a8aff',14,90);
 }
 function gainXP(x){
@@ -1274,7 +1275,7 @@ function gainXP(x){
 }
 function playerDie(src){
   P.dead=true; P.life=0; G.deaths++; sfx('bossDie');
-  const lost=Math.floor(P.gold*0.1); P.gold-=lost;
+  const lost=Math.floor(P.gold*0.05); P.gold-=lost;
   const who=src&&src.D?(src.cname||src.D.name):'the malady';
   setTimeout(()=>{ $('deathTxt').innerHTML='Slain by <b>'+esc(who)+'</b>. You lost '+lost+' gold.<br><br><i>'+esc(src&&src.D?src.D.note:'')+'</i>';
     $('deathScr').classList.remove('hidden'); },1200);
@@ -1282,7 +1283,7 @@ function playerDie(src){
 
 // ===================== LOOT =====================
 let _uid=1;
-function scaleWeapon(d,il){const sc=1+0.13*il;return [Math.round(d[0]*sc+il*0.4),Math.round(d[1]*sc+il*0.75)];}
+function scaleWeapon(d,il){const sc=1.5+0.2*il;return [Math.round(d[0]*sc+il*0.8),Math.round(d[1]*sc+il*1.4)];}
 function rollItem(il,opt){
   opt=opt||{}; const mf=1+(P&&P.st?P.st.mf:0)/100; let r=Math.random(), rar='normal';
   if(opt.unique||r<0.02*mf) rar=Math.random()<0.62?'unique':'set';
@@ -1322,7 +1323,7 @@ function dropPot(x,y){const a=rnd(0,6.28),r=rnd(6,40);let px=x+Math.cos(a)*r,py=
 function dropLoot(m){
   const c=m.champ;
   if(Math.random()<(c?0.9:0.36)) dropGold(m.x,m.y,Math.round(rnd(3,9)*(1+0.55*G.depth)*(c?3:1)));
-  if(Math.random()<(c?0.4:0.075)) dropPot(m.x,m.y);
+  if(Math.random()<(c?0.6:0.14)) dropPot(m.x,m.y);
   const n=c?ri(1,2):(Math.random()<0.07?1:0);
   for(let i=0;i<n;i++) dropItem(m.x,m.y,rollItem(G.depth+(G.nm?6:0),c?{min:'magic'}:{}));
 }
@@ -1729,6 +1730,7 @@ function drawVignette(){
   const g=cx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.max(W,H)*0.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,0.7)');cx.fillStyle=g;cx.fillRect(0,0,W,H);
   let red=0; if(P.hurtT>0) red=P.hurtT*0.9; if(P.st&&P.life<P.st.life*0.3) red=Math.max(red,0.18+0.12*Math.sin(G.t*6)); if(G.lowMAP) red=Math.max(red,0.25+0.15*Math.sin(G.t*4));
   if(red>0){const g2=cx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.25,W/2,H/2,Math.max(W,H)*0.7);g2.addColorStop(0,'rgba(120,0,0,0)');g2.addColorStop(1,'rgba(170,0,0,'+Math.min(0.6,red)+')');cx.fillStyle=g2;cx.fillRect(0,0,W,H);}
+  if(P.st&&P.life<P.st.life*0.4&&P.pots.h>0&&!P.dead&&!G.lowMAP){cx.fillStyle='rgba(255,120,100,'+(0.75+0.25*Math.sin(G.t*7))+')';cx.font='bold 17px Cinzel,serif';cx.textAlign='center';cx.fillText('LOW LIFE — PRESS Q FOR PACKED RBCs',W/2,H-140);}
   if(G.lowMAP){cx.fillStyle='rgba(255,90,70,'+(0.7+0.3*Math.sin(G.t*5))+')';cx.font='bold 15px Cinzel,serif';cx.textAlign='center';cx.fillText('MAP < 65 mmHg — STAND IN A NOREPINEPHRINE FONT',W/2,H-140);}
 }
 // ---------- labels, bars, floats ----------
@@ -1786,6 +1788,92 @@ function drawMinimap(){
     dot(o.x,o.y,o.k==='stairs'?'#ffffff':o.k==='portal'?'#6aa0ff':o.k==='shrine'&&!o.used?'#ffd040':o.k==='npc'?'#f3d488':'#999',big?8:4);}
   if(G.boss&&!G.boss.dead&&G.boss.active)dot(G.boss.x,G.boss.y,'#ff2a1a',big?10:5);
   dot(P.x,P.y,'#5fe06a',big?9:5);
+}
+</script>
+<script>
+'use strict';
+// ===================== WALKTHROUGH (step tracker + guide arrow) =====================
+function nearestOf(fn){let b=null,bd=1e9;for(const m of mons){if(m.dead||!fn(m))continue;const d=hyp(m.x-P.x,m.y-P.y);if(d<bd){bd=d;b=m;}}return b;}
+const weakTo=k=>m=>(m.w[k]||1)>=1.5&&!m.boss;
+const GUIDE=[
+ {t:'Talk to Charge Nurse Ada',h:'Click her (white uniform, upper left of the plaza). She heals you for free every time you come back to town.',done:()=>G.flags.npc_nurse,tg:()=>objs.find(o=>o.id==='nurse')},
+ {t:'Visit Elder Pathologist Morrow',h:'Grey robe, lower left. He identifies loot and briefs you on each act’s boss.',done:()=>G.flags.npc_elder,tg:()=>objs.find(o=>o.id==='elder')},
+ {t:'Take the stairs north to descend',h:'Follow the golden arrow and click the stairs.',done:()=>!G.town,tg:()=>objs.find(o=>o.k==='stairs')},
+ {t:'Walk: hold LEFT-CLICK on the floor',h:'Hold the mouse button and Dr. Hill follows your cursor. WASD or the arrow keys work too.',done:()=>G.flags.walked},
+ {t:'Hover the mouse over a monster',h:'A plate appears at the top of the screen showing its WEAKNESS. Green chips = super effective.',done:()=>G.flags.hovered,tg:()=>nearestOf(()=>true)},
+ {t:'Kill a bacterium with ANTIBIOTIC VOLLEY (press 1)',h:'Point at a Staph Imp (gold grape-cluster) and press 1. Antibiotics do DOUBLE damage to bacteria. Skills aim themselves at the monster nearest your cursor.',done:()=>G.flags.weak_abx,tg:()=>nearestOf(weakTo('abx'))},
+ {t:'Dissolve a clot with tPA NOVA (press 2)',h:'Walk close to a Wandering Embolus (red blob) and press 2 — the ring hits everything around you.',done:()=>G.flags.weak_lyt,tg:()=>nearestOf(weakTo('lyt'))},
+ {t:'Shock a V-Fib Wraith with DEFIBRILLATE (press 3)',h:'Point at the blue wraith and press 3. The bolt chains between foes and stuns them.',done:()=>G.flags.weak_elec,tg:()=>nearestOf(weakTo('elec'))},
+ {t:'Drink a potion when hurt (press Q)',h:'Packed RBCs restore almost half your life instantly. You start with 8 and monsters drop more. Don’t be shy with them!',done:()=>G.flags.potion},
+ {t:'Pick up loot and equip it',h:'Click an item’s NAME on the floor, open Inventory (I), then click the item to wear it. A green ▲ in the tooltip means it’s an upgrade.',done:()=>G.flags.equipped,tg:()=>ground.find(g=>g.k==='item')},
+ {t:'Answer a Shrine of Knowledge',h:'Find the stone obelisk with a glowing ✦ and click it. A correct answer grants a powerful blessing.',done:()=>G.flags.shrine,tg:()=>objs.find(o=>o.k==='shrine'&&!o.used)},
+ {t:'Spend your skill points (press K)',h:'Each level-up gives a point. Open Skills (K) and press +. Learn Corticosteroid Ward (4): it damages inflammation AND cuts the damage you take.',done:()=>P.sk[4]>0},
+ {t:'Find the stairs down',h:'Press Tab for the map — the white square is the exit. Clearing rooms on the way gives experience and loot.',done:()=>G.maxDepth>=2&&!G.town&&G.depth>=2,tg:()=>objs.find(o=>o.k==='stairs')}
+];
+const BOSS_TIPS=[
+ 'INFARCTUS waits on the 3rd floor. tPA Nova (2) hurts him ×1.5. When a RED STRIPE appears in front of him he is about to charge — step sideways. Stay out of the dark ischemic pools. Drink potions early, not late.',
+ 'PNEUMOTHRAX: watch the PRESSURE bar. When a glowing NEEDLE appears, walk over it, then walk up to him — decompression stuns him and he takes +50% damage. His air bubbles fly outward: keep moving.',
+ 'CEREBRYX: his ICP bar keeps rising. Stand in a blue MANNITOL pool to drain it — at low ICP he takes extra damage. Purple rings have GAPS: stand in a gap. Do NOT defibrillate Seizure Sparks (it heals them).',
+ 'SEPSIS: phase 1 — antibiotics hurt him most. Phase 2 — MAP falls: stand in red NOREPINEPHRINE pools to keep MAP ≥ 65. Phase 3 — everything at once. Keep Corticosteroid Ward up and buy potions ×5 from Wren first.'
+];
+let _gEl=null,_gKey='',_gWalk=0,_gLast=null;
+function guideEl(){
+  if(_gEl) return _gEl;
+  _gEl=document.createElement('div'); _gEl.id='guide';
+  _gEl.style.cssText='position:fixed;left:10px;top:58px;width:min(310px,64vw);z-index:12;background:rgba(14,8,5,.9);border:1px solid #8a6630;border-radius:3px;padding:8px 10px 9px;box-shadow:0 4px 18px rgba(0,0,0,.8);font-size:15px;line-height:1.3;color:#e8dcc0';
+  document.body.appendChild(_gEl);
+  _gEl.addEventListener('click',e=>{const a=e.target.dataset.g; if(!a) return; e.stopPropagation(); auInit();
+    if(a==='skip'){G.tut=(G.tut||0)+1;sfx('click');} if(a==='hide'){G.guideHide=!G.guideHide;} if(a==='restart'){G.tut=0;G.guideHide=false;}
+    _gKey=''; save();});
+  return _gEl;
+}
+function guideTick(dt){
+  if(!P||G.mode!=='play'){if(_gEl)_gEl.style.display='none';return;}
+  G.flags=G.flags||{}; if(G.tut===undefined) G.tut=G.legend?GUIDE.length:0;
+  // passive flags
+  if(!G.town){ if(_gLast) _gWalk+=hyp(P.x-_gLast.x,P.y-_gLast.y); _gLast={x:P.x,y:P.y}; if(_gWalk>400) G.flags.walked=1; }
+  if(G.hover) G.flags.hovered=1;
+  if(document.body.classList.contains('touch')) G.flags.hovered=1;
+  while(G.tut<GUIDE.length&&GUIDE[G.tut].done()){G.tut++;sfx('rare');if(G.tut<GUIDE.length)toast('✔ Walkthrough step complete');else toast('✔ Walkthrough complete — you’re ready, Doctor.');}
+  const el=guideEl(); el.style.display=(G.paused||G.introOn)?'none':'block';
+  const act=actOfDepth(G.maxDepth), B=BOSSES[ACTS[act].boss];
+  let key,html;
+  if(G.guideHide){key='h';html='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-family:var(--serif);color:#f3d488;font-size:12px;letter-spacing:.15em">📜 WALKTHROUGH</b><button data-g="hide" class="dbtn small" style="padding:3px 8px;font-size:11px">Show</button></div>';}
+  else if(G.tut<GUIDE.length){const s=GUIDE[G.tut];key='s'+G.tut;
+    html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-family:var(--serif);color:#f3d488;font-size:12px;letter-spacing:.15em">📜 WALKTHROUGH · '+(G.tut+1)+'/'+GUIDE.length+'</b><span><button data-g="skip" class="dbtn small" style="padding:3px 8px;font-size:11px">Skip</button> <button data-g="hide" class="dbtn small" style="padding:3px 8px;font-size:11px">Hide</button></span></div>'+
+      '<div style="font-family:var(--serif);font-weight:700;color:#fff;font-size:15px">▸ '+s.t+'</div><div style="color:#b9a68a;font-size:14px;margin-top:3px">'+s.h+'</div>';}
+  else {key='b'+act+(G.town?'t':'d');
+    html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-family:var(--serif);color:#ff8a5a;font-size:12px;letter-spacing:.15em">⚔ OBJECTIVE · ACT '+(act+1)+'</b><button data-g="hide" class="dbtn small" style="padding:3px 8px;font-size:11px">Hide</button></div>'+
+      '<div style="font-family:var(--serif);font-weight:700;color:#fff;font-size:15px">▸ '+(G.town?'Descend — stairs north, or the Waypoint':'Defeat '+B.name+', '+B.title)+'</div><div style="color:#b9a68a;font-size:14px;margin-top:3px">'+BOSS_TIPS[act]+'</div>';}
+  if(key!==_gKey){_gKey=key;el.innerHTML=html;}
+}
+function guideTarget(){
+  if(G.guideHide||!P) return null;
+  if(G.tut<GUIDE.length){const tg=GUIDE[G.tut].tg; return tg?tg():null;}
+  if(G.boss&&!G.boss.dead) return G.boss;
+  if(G.town) return objs.find(o=>o.k==='stairs');
+  return objs.find(o=>o.k==='portal'&&o.next)||objs.find(o=>o.k==='stairs');
+}
+function drawGuideArrow(){
+  const t=guideTarget(); if(!t||P.dead) return;
+  const d=hyp(t.x-P.x,t.y-P.y), sx=t.x-OX, sy=t.y-OY;
+  const pul=Math.sin(G.t*5);
+  if(sx>0&&sy>0&&sx<W&&sy<H){ // marker above target
+    cx.save();cx.fillStyle='#f3d488';cx.shadowColor='#ffb030';cx.shadowBlur=12;cx.beginPath();const yy=sy-(t.r||20)-34+pul*5;
+    cx.moveTo(sx-9,yy-12);cx.lineTo(sx+9,yy-12);cx.lineTo(sx,yy);cx.closePath();cx.fill();cx.restore();}
+  if(d<160) return;
+  const a=Math.atan2(t.y-P.y,t.x-P.x), px=P.x-OX+Math.cos(a)*(64+pul*4), py=P.y-OY-10+Math.sin(a)*(64+pul*4);
+  cx.save();cx.translate(px,py);cx.rotate(a);cx.globalAlpha=0.9;cx.fillStyle='#f3d488';cx.shadowColor='#ff9a20';cx.shadowBlur=14;
+  cx.beginPath();cx.moveTo(14,0);cx.lineTo(-8,-10);cx.lineTo(-3,0);cx.lineTo(-8,10);cx.closePath();cx.fill();cx.restore();
+}
+function walkthroughHTML(){
+  let h='<div style="font-family:var(--serif);color:#f3d488;margin:4px 0 6px;letter-spacing:.12em">WALKTHROUGH</div>'+
+   '<b>Survival basics.</b> You have lots of life and it regenerates, but packs add up. Fight at the edge of a room so only a few foes reach you at once. When life drops below half, press <b>Q</b>. Monsters flash a <span style="color:#ff6a4a">red ring</span> right before they hit — that’s your cue to step back. Ada in town heals you to full for free (press <b>T</b> for a portal home).<br><br>'+
+   '<b>Your damage.</b> Every hover-plate tells you the weakness. A matched skill does double damage; a wrong one may do nothing. When unsure, the scalpel (left-click) works on everything and refills focus.<br><br>'+
+   '<b>Gear.</b> Pick up every named item. Weapons matter most — check damage in the tooltip and look for the green ▲. Sell junk to Apothecary Wren and buy potions ×5.<br><br>';
+  ACTS.forEach((A,i)=>{const B=BOSSES[A.boss];h+='<b>Act '+(i+1)+' — '+A.n+'</b><br>'+B.icon+' '+BOSS_TIPS[i]+'<br><br>';});
+  h+='<button class="dbtn small" data-g="restart" onclick="G.tut=0;G.guideHide=false;_gKey=\'\';toast(\'Walkthrough restarted.\')">Restart the step-by-step walkthrough</button>';
+  return h;
 }
 </script>
 <script>
@@ -1870,6 +1958,7 @@ function refreshInv(){
     el.onclick=()=>{const it=P.eq[s];if(!it)return;if(P.bag.length>=32){toast('Satchel full.');return;}delete P.eq[s];P.bag.push(it);calc();hideTip();refreshInv();sfx('click');};});
 }
 function equip(it){
+  (G.flags=G.flags||{}).equipped=1;
   let slot=it.slot; if(slot==='ring'){slot=!P.eq.ring?'ring':!P.eq.ring2?'ring2':'ring';}
   const old=P.eq[slot]; P.eq[slot]=it; P.bag.splice(P.bag.indexOf(it),1); if(old) P.bag.push(old);
   calc(); refreshInv(); sfx('loot');
@@ -1917,7 +2006,7 @@ function renderCodex(){
       h+='<div style="padding:8px 0;border-bottom:1px solid #2a1f16"><div style="font-family:var(--serif);font-weight:700;color:'+(BOSSES[id]?'#ff7a5a':'#f0dcb0')+'">'+(D.icon?D.icon+' ':'')+esc(D.name)+(D.title?' — '+esc(D.title):'')+' <span style="font-size:12px;color:#8a7650">'+(D.tag||'BOSS')+' · slain '+(G.seen[id]||0)+'</span></div><div style="font-size:14px">'+w+'</div><div class="lore" style="font-size:15px;margin-top:3px">'+esc(D.note)+'</div></div>';}});
   $('leftPanel').innerHTML=h+'</div>';}
 function renderHelp(){
-  $('leftPanel').innerHTML=panelHead('How to Play')+'<div class="pb lore">'+helpHTML()+'</div>';}
+  $('leftPanel').innerHTML=panelHead('How to Play')+'<div class="pb lore">'+walkthroughHTML()+'<hr style="border-color:#3a2a18">'+helpHTML()+'</div>';}
 function helpHTML(){return '<b>Move</b>: hold left-click on the ground (or WASD / arrows). <b>Attack</b>: click a monster (hold Shift to swing in place).<br>'+
   '<b>Skills</b>: <b>1</b> Antibiotic Volley · <b>2</b> tPA Nova · <b>3</b> Defibrillate · <b>4</b> Corticosteroid Ward — cast at your cursor. <b>Right-click</b> casts your selected skill.<br>'+
   '<b>Q</b> Packed RBCs (life) · <b>E</b> Oxygen (focus) · <b>F/Space</b> interact · <b>T</b> town portal · <b>Tab</b> map · <b>I</b> inventory · <b>C</b> character · <b>K</b> skills · <b>X</b> codex · <b>M</b> mute · <b>Esc</b> close.<br><br>'+
@@ -1947,7 +2036,7 @@ function openQuestion(title,sub,done){
 }
 function openShrine(o){
   openQuestion('Shrine of Knowledge','Answer true and the shrine bestows a blessing.',ok=>{
-    o.used=true;
+    o.used=true; (G.flags=G.flags||{}).shrine=1;
     if(!ok){toast('The shrine dims. Its lesson remains.');return;}
     const b=pick(['fury','vigor','fortune','insight','restore']);
     if(b==='fury'){P.buffs.fury=60;toast('<b style="color:#ff8a3a">SHRINE OF FURY</b> — +50% damage for 60 seconds.');}
@@ -1970,7 +2059,7 @@ let shopStock=[];
 function rollShop(){shopStock=[];for(let i=0;i<6;i++){const it=rollItem(G.maxDepth+(G.nm?6:0),{min:'magic'});it.unid=false;it.price=it.value*3;shopStock.push(it);}}
 function potPrice(){return 15+4*actOfDepth(G.maxDepth)+(G.nm?20:0);}
 function openNPC(id){
-  const lp=$('leftPanel'); lp.classList.remove('hidden'); G.leftKind='npc:'+id;
+  const lp=$('leftPanel'); lp.classList.remove('hidden'); G.leftKind='npc:'+id; (G.flags=G.flags||{})['npc_'+id]=1;
   if(id==='nurse'){P.life=P.st.life;P.focus=P.st.focus;sfx('potion');
     lp.innerHTML=panelHead('Charge Nurse Ada')+'<div class="pb lore">“You\'re patched up, Doctor — life and focus fully restored. Down there, read every malady before you treat it. '+esc(pick(LOADING_TIPS))+'”'+
       '<br><br><em>Current front:</em> '+esc(ACTS[actOfDepth(G.maxDepth)].n)+' — '+esc(ACTS[actOfDepth(G.maxDepth)].sys)+' system.<div class="npcRow"><button class="dbtn small" onclick="closeLeft()">Thank you, Ada</button></div></div>';}
@@ -2092,7 +2181,7 @@ $('touchAtk').addEventListener('touchstart',e=>{e.preventDefault();auInit();if(G
 // ===================== SAVE =====================
 const SAVE_KEY='morbus_save_v1';
 function save(){ if(!P) return; try{localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,P:{lvl:P.lvl,xp:P.xp,gold:P.gold,eq:P.eq,bag:P.bag,pots:P.pots,sk:P.sk,pts:P.pts,sel:P.sel},
-  G:{actSeen:G.actSeen,maxDepth:G.maxDepth,nm:G.nm,bossKills:G.bossKills,seen:G.seen,taught:G.taught,kills:G.kills,deaths:G.deaths,playTime:G.playTime,legend:G.legend,finished:G.finished,mini:G.mini}}));}catch(e){} }
+  G:{flags:G.flags,tut:G.tut,guideHide:G.guideHide,actSeen:G.actSeen,maxDepth:G.maxDepth,nm:G.nm,bossKills:G.bossKills,seen:G.seen,taught:G.taught,kills:G.kills,deaths:G.deaths,playTime:G.playTime,legend:G.legend,finished:G.finished,mini:G.mini}}));}catch(e){} }
 function hasSave(){try{return !!localStorage.getItem(SAVE_KEY);}catch(e){return false;}}
 function loadSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY));if(!d)return false;P=newPlayer();Object.assign(P,d.P);Object.assign(G,d.G);
   let mx=0;for(const it of [...Object.values(P.eq),...P.bag])mx=Math.max(mx,it.uid||0);_uid=mx+1;calc();P.life=P.st.life;P.focus=P.st.focus;return true;}catch(e){return false;}}
@@ -2107,10 +2196,10 @@ $('btnHow').onclick=()=>{const m=$('modal');m.style.zIndex=60;m.classList.remove
 function startGame(fresh){
   $('modal').style.zIndex=''; $('modal').classList.add('hidden');
   if(fresh||!loadSave()){
-    Object.assign(G,{actSeen:{},act:0,floor:0,depth:1,nm:0,maxDepth:1,kills:0,deaths:0,bossKills:{},seen:{},taught:{},playTime:0,legend:false,finished:false,portal:null,mini:1});
+    Object.assign(G,{flags:{},tut:undefined,guideHide:false,actSeen:{},act:0,floor:0,depth:1,nm:0,maxDepth:1,kills:0,deaths:0,bossKills:{},seen:{},taught:{},playTime:0,legend:false,finished:false,portal:null,mini:1});
     P=newPlayer();
-    const w={uid:_uid++,slot:'weapon',base:'Scalpel',name:'Scalpel',ic:'🔪',rarity:'normal',ilvl:1,st:{},f:[],d:[3,7],value:5};
-    const a={uid:_uid++,slot:'armor',base:'Scrub Top',name:'Navy Scrub Top',ic:'👕',rarity:'normal',ilvl:1,st:{},f:['Dr. Hill\'s own navy scrubs. They have seen things.'],a:6,value:5};
+    const w={uid:_uid++,slot:'weapon',base:'Scalpel',name:'Dr. Hill\'s Lucky Scalpel',ic:'🔪',rarity:'unique',ilvl:3,st:{dmg:2,abx:30,lyt:30,elec:30,ster:30,life:30,crit:6},f:['The scalpel from his first surgical rotation. It has never once let him down.'],d:[7,13],value:60};
+    const a={uid:_uid++,slot:'armor',base:'Scrub Top',name:'Navy Scrub Top',ic:'👕',rarity:'normal',ilvl:1,st:{},f:['Dr. Hill\'s own navy scrubs. They have seen things.'],a:14,st:{life:30,regen:2},value:5};
     P.eq.weapon=w; P.eq.armor=a;
     if(G.legendArmed){G.legend=true;P.lvl=15;P.sk=[1,5,5,5,4];P.pts=0;P.gold=5000;P.pots={h:20,m:20};G.maxDepth=12;
       SETS.virchow.pieces.forEach(pc=>{const it={uid:_uid++,slot:pc.slot,base:pc.n,name:pc.n,ic:pc.ic,rarity:'set',set:'virchow',ilvl:14,st:{},f:[SETS.virchow.f],unid:false,a:pc.a*2,value:500};for(const k in pc.st)it.st[k]=pc.st[k]*(k==='lyt'||k==='speed'?1:2);P.eq[pc.slot]=it;});
@@ -2162,7 +2251,7 @@ function frame(now){
   updateMouseWorld();
   G.hover=(!document.body.classList.contains('touch')&&!G.paused)?monAt(mouse.wx,mouse.wy):null;
   if(mouse.l&&!G.paused&&(!P.order||P.order.type==='move')&&!mouse.shift){const m=monAt(mouse.wx,mouse.wy);if(m)P.order={type:'attack',m};}
-  render(); hudUpdate(dt);
+  render(); if(typeof drawGuideArrow==='function') drawGuideArrow(); hudUpdate(dt); if(typeof guideTick==='function') guideTick(dt);
 }
 requestAnimationFrame(frame);
 

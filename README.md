@@ -35,6 +35,20 @@ Runs in any modern browser on desktop, laptop, tablet or phone. Nothing to insta
 
 Each act has two procedurally generated dungeon floors and a boss lair. Every run has a different layout.
 
+## New player? Follow the walkthrough
+
+A **📜 Walkthrough** panel in the top-left corner guides you one step at a time, and a **golden arrow** points to where you need to go:
+
+1. Talk to Charge Nurse Ada, then Elder Pathologist Morrow.
+2. Take the stairs north into the dungeon.
+3. Learn to walk and attack, then read a monster's weakness by hovering over it.
+4. Kill a bacterium with antibiotics (**1**), dissolve a clot with tPA (**2**), and shock a V-Fib Wraith (**3**).
+5. Drink a potion (**Q**), equip loot, answer a Shrine of Knowledge, spend skill points (**K**), and find the stairs.
+
+After that, the panel switches to the **current boss objective** with a strategy tip. The full written walkthrough, including every boss strategy, is under **Help (H)**. You can skip or hide any step.
+
+**Survival tips:** monsters flash a red ring just before they strike, so step back when you see it. Press **Q** when life drops below half; the screen will remind you. Press **T** to portal home, and Ada heals you for free. You start with *Dr. Hill's Lucky Scalpel*, 212 life and 8 potions.
+
 ## How to play
 
 | Action | Mouse / keyboard | Touch |
